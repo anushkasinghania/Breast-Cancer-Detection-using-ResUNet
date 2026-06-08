@@ -16,7 +16,7 @@ Breast cancer is one of the most fatal cancers for women, and its high mortality
 
 ---
 
-## Model Architecture — ResU-Net
+## Model Architecture - ResU-Net
 
 ResU-Net extends U-Net by replacing plain convolution blocks with **residual blocks**, enabling deeper training without performance degradation.
 
@@ -118,12 +118,26 @@ A local copy is included at [`Documents/Breast Tumour Detection using Deep Convo
 
 ---
 
-## **Tech Stack**
-Python · TensorFlow / Keras · NumPy · scikit-image · Matplotlib · Pandas · Google Colab
+## Tech Stack
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?style=flat&logo=tensorflow&logoColor=white)
+![Keras](https://img.shields.io/badge/Keras-D00000?style=flat&logo=keras&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243?style=flat&logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat&logo=pandas&logoColor=white)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?style=flat&logo=python&logoColor=white)
+![scikit-image](https://img.shields.io/badge/scikit--image-F7931E?style=flat&logo=scikit-learn&logoColor=white)
+![Google Colab](https://img.shields.io/badge/Google%20Colab-F9AB00?style=flat&logo=googlecolab&logoColor=white)
 
 ---
 
-## **Authors**
-Himashri Mehra · Anushka Singhania · Anu Narera · Neha Singh
+## Authors
+
+| Name | Role |
+|------|------|
+| Himashri Mehra | Co-author |
+| [Anushka Singhania](https://github.com/anushkasinghania) | Co-author |
+| Anu Narera | Co-author |
+| Neha Singh | Co-author |
 
 
