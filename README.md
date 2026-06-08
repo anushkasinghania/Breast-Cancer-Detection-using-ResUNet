@@ -70,14 +70,14 @@ Sample prediction outputs are in the [`Results/`](./Results/) folder.
 '''
 .
 ├── Documents/
-│ ├── AnushkaSinghania_Major Project Report.pdf
-│ └── Breast Tumour Detection using Deep Convolutional Published paper.pdf
+│   ├── AnushkaSinghania_Major_Project_Report.pdf
+│   └── Published_Paper.pdf
 ├── Results/
-│ ├── Learning Curve.png
-│ ├── Ground Truth.png
-│ └── Pred1.png … Pred10.png
-├── breast_cancer_detection_resunet.py # Full model, training & inference code
-└── README.md
+│   ├── Learning_Curve.png
+│   ├── Ground_Truth.png
+│   ├── Pred1.png ... Pred10.png
+├── breast_cancer_detection_resunet.py    # Model architecture, training, and inference
+└── README.md                             # Project documentation
 
 '''
 
