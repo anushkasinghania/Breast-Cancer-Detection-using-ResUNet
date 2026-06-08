@@ -4,7 +4,8 @@
 [![Published](https://img.shields.io/badge/IJERCSE-Published-blue)](https://ijercse.com/viewabstract.php?id=16195&volume=Volume10&issue=Issue1)
 [![ISSN](https://img.shields.io/badge/ISSN-2394--2320-green)](https://ijercse.com/viewabstract.php?id=16195&volume=Volume10&issue=Issue1)
 
-Automated breast tumour detection and segmentation using a **Residual U-Net (ResU-Net)** — combining residual skip connections with the U-Net encoder–decoder architecture for robust pixel-level tumour localisation on breast ultrasound images.
+This Project is part of my B. Tech(2019-23) Final Year Project.
+Automated breast tumour detection and segmentation using a **Residual U-Net (ResU-Net)** - combining residual skip connections with the U-Net encoder–decoder architecture for robust pixel-level tumour localisation on breast ultrasound images.
 
 > 📄 **Published in IJERCSE, Vol. 10, Issue 1 (Jan 2023).** See [Publication](#publication).
 
