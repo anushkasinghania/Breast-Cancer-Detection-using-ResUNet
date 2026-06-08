@@ -115,3 +115,15 @@ A local copy is included at [`Documents/Breast Tumour Detection using Deep Convo
   url     = {https://ijercse.com/viewabstract.php?id=16195&volume=Volume10&issue=Issue1}
 }
 
+
+---
+
+## **Tech Stack**
+Python · TensorFlow / Keras · NumPy · scikit-image · Matplotlib · Pandas · Google Colab
+
+---
+
+## **Authors**
+Himashri Mehra · Anushka Singhania · Anu Narera · Neha Singh
+
+
