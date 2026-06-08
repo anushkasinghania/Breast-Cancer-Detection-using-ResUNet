@@ -67,7 +67,6 @@ Sample prediction outputs are in the [`Results/`](./Results/) folder.
 
 ## Repository Structure
 
-'''
 .
 ├── Documents/
 │   ├── AnushkaSinghania_Major_Project_Report.pdf
@@ -79,7 +78,6 @@ Sample prediction outputs are in the [`Results/`](./Results/) folder.
 ├── breast_cancer_detection_resunet.py    # Model architecture, training, and inference
 └── README.md                             # Project documentation
 
-'''
 
 
 ---
