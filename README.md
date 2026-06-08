@@ -114,7 +114,7 @@ A local copy is included at [`Documents/Breast Tumour Detection using Deep Convo
   issn    = {2394-2320},
   url     = {https://ijercse.com/viewabstract.php?id=16195&volume=Volume10&issue=Issue1}
 }
-
+```
 
 ---
 
@@ -136,8 +136,7 @@ A local copy is included at [`Documents/Breast Tumour Detection using Deep Convo
 | Name | Role |
 |------|------|
 | Himashri Mehra | Co-author |
-| [Anushka Singhania](https://github.com/anushkasinghania) | Co-author |
+| [Anushka Singhania] | Co-author |
 | Anu Narera | Co-author |
 | Neha Singh | Co-author |
-
 
