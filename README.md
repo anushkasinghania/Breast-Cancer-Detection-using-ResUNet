@@ -136,7 +136,7 @@ A local copy is included at [`Documents/Breast Tumour Detection using Deep Convo
 | Name | Role |
 |------|------|
 | Himashri Mehra | Co-author |
-| [Anushka Singhania] | Co-author |
+|[Anushka Singhania | Co-author |
 | Anu Narera | Co-author |
 | Neha Singh | Co-author |
 
