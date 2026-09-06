@@ -1,0 +1,208 @@
+PART 3 — Block diagram, section A: open the port
+Everything in this section goes at the far left of the diagram, before any loop.
+3.1 Place three VIs, left to right
+1.	Functions » Instrument I/O » Serial » VISA Configure Serial Port
+2.	Functions » Instrument I/O » Serial » VISA Set I/O Buffer Size
+3.	Functions » Instrument I/O » Serial » VISA Flush I/O Buffer
+3.2 Wire the chain
+•	VISA Resource terminal → VISA resource name input of Configure
+•	Configure's VISA resource name out → Set Buffer Size's resource in
+•	Set Buffer Size out → Flush's resource in
+•	Chain the error out → error in wires the same way, left to right
+3.3 Create the constants
+For each input below: right-click the input terminal → Create » Constant, then type the value.
+VISA Configure Serial Port:
+Input	Value	Note
+baud rate	921600	
+data bits	8	
+parity	0	No parity
+stop bits	10	10 means one stop bit
+flow control	0	None
+timeout	1000	milliseconds
+enable termination char	FALSE	right-click the constant to toggle it
+If you change nothing else on this page, change the termination character. LabVIEW defaults it to TRUE with 0x0A, and your binary payloads are full of 0x0A bytes. Leave it on and your reads will chop messages in half at random.
+VISA Set I/O Buffer Size: mask 16, size 65536
+VISA Flush I/O Buffer: mask 16
+________________________________________
+PART 4 — Block diagram, section B: loop 1 (send)
+4.1 Structures
+1.	Functions » Programming » Structures » While Loop — drag out a large rectangle to the right of section A
+2.	Functions » Programming » Structures » Event Structure — place it inside, on the left. Leave room to its right.
+4.2 Create three output tunnels
+Wire these out of the right edge of the Event Structure. You'll create them by wiring from inside a case to the border.
+•	MSGID (U8)
+•	Payload (U8 array)
+•	Send? (boolean)
+Critical: right-click each of the three tunnels → tick Use Default If Unwired. Without this, LabVIEW forces you to wire all three in every single case, including the timeout case.
+4.3 Add the event cases
+Right-click the Event Structure border → Add Event Case. In the dialog, pick the control on the left and Value Change on the right.
+Case: Set Mode → Value Change
+•	U8 constant 0 → MSGID tunnel
+•	Functions » Programming » Array » Array Constant, drop a U8 numeric inside, set the single element to 65 (that's 0x41, ASCII A) → Payload tunnel
+•	TRUE constant → Send? tunnel
+Case: Home All → Value Change
+•	U8 constant 145 (0x91) → MSGID
+•	Empty U8 array constant → Payload
+•	TRUE → Send?
+Case: Read Positions → Value Change
+Same, MSGID 178 (0xB2), empty payload.
+Case: Status Streaming → Value Change
+•	U8 constant 1 → MSGID
+•	Wire the Status Streaming terminal (LabVIEW puts a NewVal terminal on the event node — use that) → Functions » Programming » Boolean » Boolean To (0,1) → To Unsigned Byte → Build Array (one input) → Payload
+•	TRUE → Send?
+Case: Move Fins → Value Change
+This one has real content. Build it in this order:
+1.	Functions » Programming » Array » Build Array — resize to 4 inputs. Wire Fin 1 (deg) … Fin 4 (deg) terminals into it. Output is a 4-element DBL array.
+2.	Another Build Array, 4 inputs. Wire Move Fin 1? … Move Fin 4?. Output is a 4-element boolean array.
+3.	Functions » Programming » Structures » For Loop. Wire both arrays into it (both tunnels auto-index, so N becomes 4 automatically).
+4.	Inside the For Loop, place a Case Structure driven by the boolean element. TRUE case (this fin moves): 
+o	indexed degrees → Multiply by numeric constant 1241.6
+o	→ Functions » Programming » Numeric » Round To Nearest
+o	→ To Long Integer (Programming » Numeric » Conversion)
+o	→ Add numeric constant 8388608
+o	→ Functions » Programming » Numeric » Quotient & Remainder, other input 65536. The quotient is byte 0.
+o	the remainder → another Quotient & Remainder, other input 256. Quotient is byte 1, remainder is byte 2.
+o	Put To Unsigned Byte on all three
+o	Build Array with 3 inputs, in order byte0, byte1, byte2
+FALSE case (don't move this fin): 
+o	U8 Array Constant containing 0, 0, 0
+5.	The Case Structure output goes to the For Loop's right edge as an auto-indexing tunnel. You now have a 4 × 3 two-dimensional array.
+6.	Functions » Programming » Array » Reshape Array — first dimension input 12. (Drag the node to show only one dimension input.) Output is a flat 12-byte array.
+7.	That → Payload tunnel. U8 constant 144 (0x90) → MSGID. TRUE → Send?.
+Case: Start Test → Value Change
+1.	Build Array, 4 inputs, wire Test Fin 1? … Test Fin 4?
+2.	→ Functions » Programming » Boolean » Boolean Array To Number → To Unsigned Byte. That's your fin-select bitmask byte.
+3.	Test Type terminal → To Unsigned Byte. That's the test-type byte.
+4.	Repeat steps 1–6 of the Move Fins case using Test Deg 1 … Test Deg 4, except skip the Case Structure — every fin is always encoded here. You get 12 bytes.
+5.	Build Array, 3 inputs, right-click it → tick Concatenate Inputs. Wire: fin-select byte, test-type byte, the 12-byte array. Result: 14 bytes.
+6.	→ Payload. U8 constant 147 (0x93) → MSGID. TRUE → Send?.
+Case: STOP → Value Change
+•	Wire a TRUE constant to a fourth output tunnel called Stop? (also set Use Default If Unwired)
+•	Wire Stop? to the While Loop's stop terminal
+4.4 The shared send chain
+Place this to the right of the Event Structure, still inside the While Loop. Every case feeds into it — this is what saves you from six copies.
+1.	Functions » Programming » Structures » Case Structure, selector wired to the Send? tunnel
+2.	FALSE case: empty. Do nothing.
+3.	TRUE case, wire left to right: 
+o	Payload → Functions » Programming » Array » Array Size → To Unsigned Byte → this is MSGLEN
+o	Build Array, 5 inputs, right-click → Concatenate Inputs. In order: U8 constant 235 (0xEB), U8 constant 144 (0x90), MSGID, MSGLEN, Payload
+o	that array → Checksum.vi (place via Functions » Select a VI…)
+o	Build Array, 2 inputs, Concatenate Inputs ticked: the array from the previous Build Array, then the checksum byte
+o	→ Functions » Programming » String » String/Array/Path Conversion » Byte Array To String
+o	→ Functions » Instrument I/O » Serial » VISA Write (write buffer input)
+o	branch the string to the TX Hex indicator so you can see what went out
+4.	Wire the VISA resource from section A into VISA Write, and thread the error wire through
+4.5 Timeout case
+Select the Timeout case in the Event Structure and set the timeout terminal (top-left of the structure) to a numeric constant -1. The loop then sleeps until you click something — no CPU burn.
+4.6 Test what you have
+Run it. Click Set Mode. Look at TX Hex — it must read:
+EB 90 00 01 41 3B
+If it does, your entire transmit path is correct.
+________________________________________
+PART 5 — Block diagram, section C: loop 2 (receive)
+Place a second While Loop below loop 1, not inside it. They run in parallel.
+5.1 Read whatever arrived
+1.	Functions » Instrument I/O » Serial » VISA Bytes at Serial Port — wire the VISA resource in. Its output is a byte count.
+2.	Functions » Programming » Comparison » Greater? — count vs numeric constant 0
+3.	Case Structure on that result: 
+o	TRUE: Functions » Instrument I/O » Serial » VISA Read, wire the byte count to its byte count input. Output string → Functions » Programming » String » String/Array/Path Conversion » String To Byte Array
+o	FALSE: empty U8 Array Constant
+4.	Functions » Programming » Timing » Wait (ms) inside the loop, constant 5
+5.2 The buffer
+1.	Right-click the left edge of loop 2 → Add Shift Register
+2.	Wire an empty U8 Array Constant to the left shift register, from outside the loop
+3.	Build Array, 2 inputs, Concatenate Inputs ticked: left shift register first, then the new bytes from 5.1
+This shift register is the one piece of state you can't avoid. A serial read returns whatever bytes happened to arrive — often half a message, sometimes two and a half. Whatever's left over has to survive until the next read.
+5.3 The parser
+Place a While Loop inside loop 2. Give it one shift register, initialised from the concatenated buffer above.
+Build it in two stages. Get stage 1 working before adding stage 2.
+Stage 1 — assume the buffer starts at EB 90
+Case Structure A, selector = Array Size(buffer) → Greater Or Equal? → 5
+•	FALSE: wire buffer straight through to the right shift register. TRUE constant → parser loop stop terminal.
+•	TRUE: continue below.
+Inside A's TRUE case:
+•	Index Array(buffer, 3) → To Long Integer → Add 5 → this is need
+•	Case Structure B, selector = Array Size(buffer) ≥ need 
+o	FALSE: buffer through unchanged. TRUE → stop terminal. (More bytes are still coming.)
+o	TRUE: 
+	Functions » Programming » Array » Array Subset — array = buffer, index 0, length = need - 1 → Checksum.vi → computed checksum
+	Index Array(buffer, need - 1) → received checksum
+	Equal? on the two
+	Case Structure C on that comparison 
+	TRUE: Index Array(buffer, 2) → MSGID. Array Subset(buffer, 4, need - 5) → payload. Send both into the decoder (Part 6). Increment Frames RX.
+	FALSE: increment Checksum Errors.
+	Array Subset(buffer, need) — no length wired, takes everything from there on → right shift register. FALSE → stop terminal, so the loop goes round again and picks up any further complete messages already buffered.
+Stage 2 — add resync
+Once stage 1 works, insert one more case between A and B.
+Inside A's TRUE case, before anything else:
+•	Index Array(buffer, 0) → Equal? → U8 constant 235
+•	Index Array(buffer, 1) → Equal? → U8 constant 144
+•	Functions » Programming » Boolean » And on the two results
+•	Case Structure, selector = that And 
+o	FALSE: Array Subset(buffer, 1) → right shift register (drops one byte). FALSE → stop terminal, so it keeps hunting.
+o	TRUE: everything from stage 1 goes in here.
+That's the whole sync-word mechanism: step forward one byte at a time until you find EB 90, then trust the checksum to confirm it wasn't a coincidence.
+________________________________________
+PART 6 — The decoder
+Inside case C's TRUE branch, place a Case Structure with MSGID as the selector.
+Type the case labels in decimal. LabVIEW's case selector doesn't take hex:
+Message	Type this	Hex
+Status	154	0x9A
+Read Positions reply	130	0x82
+Home All reply	97	0x61
+Set Mode reply	16	0x10
+Functional test reply	99	0x63
+Make one case the Default so unknown IDs don't error out — wire the payload to RX Hex there.
+6.1 A reusable 3-byte decoder
+You need this pattern several times. Build it once inside a For Loop:
+•	Array Subset(payload, offset, count) → Reshape Array to n × 3
+•	into a For Loop, auto-indexing the rows
+•	inside: Index Array the row at 0, 1, 2 → To Long Integer on each
+•	byte0 × 65536 + byte1 × 256 + byte2
+•	Subtract 8388608
+•	Multiply 0.000805 → degrees
+•	auto-indexed output → array of n angles
+Endianness: this assumes byte 0 is the most significant. The document never states it. If your positions come out looking random in Part 7 step 5, swap the multipliers so byte 2 gets × 65536 and byte 0 gets × 1. Because it's all in this one For Loop, that's a one-place edit.
+6.2 Case 154 — status message (74 bytes)
+•	Positions: Array Subset(payload, 0, 24) through the 3-byte decoder with Reshape to 8 × 3 → 8 angles. Array Subset(result, 0, 4) → the four Current n (deg) indicators (use Index Array with 4 outputs — drag the node taller). Array Subset(result, 4, 4) → the four Cmd n (deg) indicators. Also wire the full 8-element array straight to Position Chart.
+•	Currents: Array Subset(payload, 24, 8) → Reshape Array to 4 × 2 → For Loop → byte0 × 256 + byte1 → Motor Currents array indicator
+•	Status word: Index Array(payload, 32) and (payload, 33) → byte0 × 256 + byte1 → Functions » Programming » Boolean » Number To Boolean Array → Array Subset(0, 12) → Status Bits
+•	PWM: Array Subset(payload, 34, 8) → same 2-byte pattern → PWM
+6.3 Cases 130 and 97 — position replies (12 bytes)
+Array Subset(payload, 0, 12) → 3-byte decoder with Reshape to 4 × 3 → the four Current n (deg) indicators.
+6.4 Case 16 — Set Mode reply
+Nothing to decode. Wire the payload to RX Hex so you can see the 41 come back.
+6.5 Case 99 — functional test reply (33 bytes)
+•	Index Array(payload, 0) → end flag → Not Equal? 0 → Test Running LED
+•	Array Subset(payload, 1, 3) → 3-byte decoder → commanded Fin 1
+•	Array Subset(payload, 4, 3) → 3-byte decoder → achieved Fin 1
+•	Build Array, 2 inputs (not concatenate) → Test Chart
+That gives you commanded vs achieved on one chart, which is the plot that actually tells you whether the actuator is tracking. Add the other fins later using the offsets in the message table — remember the currents sit in the order fin 2, fin 1, fin 3.
+6.6 Stopping loop 2
+Right-click the STOP terminal on the block diagram → Create » Local Variable. Drag the local into loop 2 (it defaults to Read mode, which is what you want). Wire it to loop 2's stop terminal.
+This is why STOP had to be Switch When Pressed — a latch button resets after the first read and loop 2 would never see it.
+________________________________________
+PART 7 — Section D and first run
+7.1 Close the port
+To the right of both loops: Functions » Instrument I/O » Serial » VISA Close, then Functions » Programming » Dialog & User Interface » Simple Error Handler.
+Wire both loops' error wires into a Merge Errors node (Programming » Dialog & User Interface » Merge Errors) first, then into Close.
+7.2 Clean up
+Ctrl+U runs Clean Up Diagram. Do it — a tidy diagram is much easier to debug. Then Ctrl+S.
+7.3 Run in this order
+1.	Loopback first. Jumper the Moxa's TX+ to RX+ and TX− to RX−, nothing else connected. Run, click Set Mode. TX Hex and RX Hex should both show EB 90 00 01 41 3B, and Frames RX should increment. This proves the port config, the framing, the checksum and the parser all at once, with no hardware risk.
+2.	Remove the jumper, connect the A, motors unpowered. Click Set Mode. You should get EB 90 10 01 41 back.
+3.	Click Read Positions. The four Current n (deg) values should sit near zero. If they're wild, flip the endianness in 6.1.
+4.	Power the motors with a current limit set. Click Home All.
+5.	Set Fin 1 (deg) to 1.0, tick only Move Fin 1?, click Move Fins. One fin should move.
+6.	Flip Status Streaming on. Frames RX should climb steadily and Checksum Errors should stay at zero.
+7.	Set Test Type to Step, tick Test Fin 1?, set Test Deg 1, click Start Test. Watch Test Chart.
+7.4 If a step fails
+Symptom	Look at
+TX Hex wrong	The Build Array nodes — is Concatenate Inputs ticked on both?
+Nothing in RX Hex	Moxa in RS-485 mode, or the TX/RX pairs aren't crossed
+RX Hex shows data but Frames RX stays 0	Checksum span — it must include both EB and 90
+Checksum Errors climbing fast	Termination char wasn't set to FALSE
+Positions in the millions	You skipped the Subtract 8388608
+All fins move together	The FALSE case of the Move Fins loop isn't wired to 0,0,0
+Loop 2 won't stop	STOP is still on latch action
+
