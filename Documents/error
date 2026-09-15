@@ -1,0 +1,82 @@
+
+
+## The error, and testing without hardware
+
+**`0xBFFF000E` means the VISA Resource control is empty** — no port selected, or no COM port exists on the PC at all. VISA Configure fails, hands an invalid session downstream, and VISA Write reports it.
+
+You do **not** need the ACEU. You need *a COM port to exist*. Two ways:
+
+- **Plug in the Moxa on its own.** No ACEU, no motors. The COM port appears, VISA opens it, and everything works — you just get no replies.
+- **No Moxa either?** Install `com0com` (free, creates a linked virtual COM pair). You get COM10 and COM11; open COM10 in your VI and watch the bytes arrive on COM11 in any terminal program.
+
+But here's the useful part: **TX Hex does not depend on VISA at all.** Look at the wiring — N3 → N4 → N5 → N6 → TX Hex is pure dataflow with no error wire. So TX Hex should populate correctly even while VISA Write is throwing that error. You can validate most of the program with a broken port.
+
+Which means the fact that TX Hex is blank points at something else.
+
+## Why TX Hex is blank — a real fault in my Milestone 3
+
+`Latch When Released` reads TRUE for exactly **one** loop iteration. Your loop runs every 50 ms. So the frame appears in TX Hex for 50 ms and is then overwritten by case 0's empty array.
+
+It's flashing too fast to see. My fault — I put the display update in the wrong place.
+
+**Fix:** enlarge **N23** so it encloses **N4, N5 and N6** as well as N11. Drag its border out to the left.
+
+Then TX Hex only updates when a message is actually sent, and holds the last one.
+
+While you're there, that's also architecturally right: no point computing a checksum when there's nothing to send.
+
+## Your numbered questions
+
+**D7 — hardware needed?** No. See above. Expect: TX Hex correct, RX Hex empty, VISA error until a port exists.
+
+**D8 — skip it.** D8 is the "now connect the ACEU" step. No hardware, nothing to do. Go to Part E.
+
+**E1 — which latch?** `Latch When Released` is right, and it's what you picked. It fires on mouse-up, which lets you drag off the button to cancel. `Latch When Pressed` fires on mouse-down. `Latch Until Released` stays TRUE while held — wrong for a command button.
+
+**E2 — one loop or two?** **One.** N16 encloses N11 *and* the N3–N6 chain. My wording was ambiguous.
+
+**E4 — resizing and typing.** Hover over the array constant until small square handles appear at its corners. Drag the **bottom-right handle to the right** to reveal more boxes. Then click into box 0 and type; Tab moves to the next.
+
+One trap: showing five boxes doesn't mean five elements exist. Until you actually type a value into a box, the array is still empty. Type into every box, then click blank diagram space.
+
+**E4 — is case 3 missing?** Deliberate, not a mistake. The values are bit weights from `Boolean Array To Number`: button 0 → 1, button 1 → 2, button 2 → 4. Case 3 would mean Set Mode *and* Home All pressed in the same instant. It can't normally happen, and if it did, it falls through to Default and sends nothing. Safe.
+
+**E6 — no output.** The latch-flash problem. Apply the N23 fix above.
+
+**F2 — where does N15 go?** **Inside N24**, next to N14. Front panel terminals work fine inside loops — that's how it updates every iteration.
+
+**N25 constant — left.** Wait (ms) has one input, on its left. You did it right.
+
+**W39 — what about N7 to N8?** They no longer connect. In Milestone 4:
+- N8's VISA resource comes from **N2** (that's W39)
+- N7's `VISA resource name out` is left **unwired** — that's fine
+- N7's `error out` goes out through N23's tunnel, then N16's tunnel, then into N26 (Merge Errors) as `error in 1`
+
+I left that last hop unstated. That's the missing piece of W36.
+
+**F5 — what to expect?** With the N23 fix and a COM port present: TX Hex shows the frame when you click a button. RX Hex stays empty. No errors. That's success at this stage.
+
+**Part G opening line — you're right.** I wrote "RX Hex shows raw bytes" assuming hardware. With nothing connected, nothing arrives. Expected.
+
+**W43 — keep RX Hex.** Branch it. `N14 read buffer` → **N30**, and `N14 read buffer` → **N15**. Both. Keep RX Hex for debugging; it's useful for a long time yet.
+
+**W46 — around N29, not through it.** N32 sits **outside and to the right of** N29, still inside N24. The shift register wire runs past N29 (above or below it) straight to N32's element 0. N29's output tunnel goes to N32's element 1. The two wires meet at N32.
+
+```
+        ┌─── N24 (read loop) ─────────────────────────┐
+ [SR]───┼──────────────────────────────┐              │
+        │  N13 ──▶ N28 ──▶ ┌── N29 ──┐ │              │
+        │                  │ N14,N30 │ │              │
+        │                  │   N31   │ │              │
+        │                  └────┬────┘ │              │
+        │                       └──────▼── N32 ──▶ N33│
+        └─────────────────────────────────────────────┘
+```
+
+## What to do next
+
+1. Enlarge N23 around N4, N5, N6
+2. Get a COM port — plug in the Moxa alone, or install com0com
+3. Run, click Set Mode, confirm TX Hex reads `EB 90 00 01 41 3B` and stays
+
+Once TX Hex holds steady, Milestones 1–4 are proven and you can build the parser knowing the transmit side is solid.
